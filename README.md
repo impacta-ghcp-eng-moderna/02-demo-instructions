@@ -6,53 +6,31 @@ Ele usa a aplicação Training Catalog do
 para mostrar que regras gerais e regras específicas podem ser combinadas sem
 repetir todo o contexto em cada prompt.
 
-## O que existe no repositório
-
-O código fica em `src` e contém uma solução .NET 10 com:
-
-| Projeto | Responsabilidade |
-| --- | --- |
-| `Api` | ASP.NET Core Minimal API |
-| `Application` | Contratos do domínio |
-| `Infrastructure` | Entity Framework Core e SQLite |
-| `Client` | Blazor WebAssembly |
-| `Tests/Api.Tests` | Testes funcionais xUnit |
-
-Além da aplicação, o repositório contém um Codespace mínimo e quatro arquivos
-que orientam agentes de IA em escopos diferentes:
-
-```text
-.
-|-- .devcontainer/devcontainer.json
-|-- .github/copilot-instructions.md
-|-- .github/instructions/
-|   |-- api.instructions.md
-|   `-- tests.instructions.md
-|-- AGENTS.md
-`-- src/
-```
-
-## Codespace mínimo
-
-`.devcontainer/devcontainer.json` usa a imagem oficial
-`mcr.microsoft.com/devcontainers/dotnet:1-10.0-noble`. Somente as extensões
-GitHub Copilot e GitHub Copilot Chat, necessárias para a demonstração, são
-instaladas. Nenhuma Feature, porta ou instalação de `sqlite3` foi configurada.
-O runtime nativo usado pelo pacote do Entity Framework Core já é suficiente
-para executar a aplicação e os testes; o programa de linha de comando `sqlite3`
-não é necessário para esta demonstração.
-
-Depois de criar o Codespace, confirme o ambiente e a solução:
-
-```bash
-dotnet --version
-dotnet restore src/TrainingCatalog.slnx
-dotnet test src/TrainingCatalog.slnx --no-restore
-```
-
-A primeira saída deve começar com `10.`.
-
 ## Como os arquivos de instructions funcionam
+
+Antes de comparar os arquivos, separe dois conceitos:
+
+- **escopo de armazenamento** define onde a instruction fica e com quem ela é
+  compartilhada;
+- **escopo de aplicação** define em quais tarefas ou arquivos ela entra
+  automaticamente no contexto.
+
+Na janela **Agent Customizations**, **New Instructions (Workspace)** e
+**New Instructions (User)** escolhem o escopo de armazenamento, não o alcance
+automático da regra:
+
+| Opção | Local padrão | Compartilhamento | Aplicação |
+| --- | --- | --- | --- |
+| **Workspace** | `.github/instructions/*.instructions.md` | Versionado com o repositório | Conforme `applyTo` ou anexo manual |
+| **User** | `~/.copilot/instructions/*.instructions.md` | Pessoal, disponível entre workspaces | Conforme `applyTo` ou anexo manual |
+| **Repository-wide** | `.github/copilot-instructions.md` | Versionado com o repositório | Sempre ativo no workspace |
+| **Agent instructions** | `AGENTS.md` | Versionado e interoperável | Ativo no workspace ou conforme sua localização aninhada |
+
+Assim, `api.instructions.md` e `tests.instructions.md` são **Workspace
+Instructions**, enquanto `noir.instructions.md`, criado mais adiante, é uma
+**User Instruction**. Uma Workspace Instruction não se aplica necessariamente
+a todo o workspace: seu front matter `applyTo` controla a aplicação
+automática. Sem `applyTo`, o arquivo ainda pode ser anexado manualmente.
 
 ### `.github/copilot-instructions.md`
 
@@ -108,16 +86,75 @@ O VS Code pode combinar mais de uma instruction na mesma solicitação, sem
 garantir uma ordem entre elas. Por isso, os arquivos deste repositório têm
 responsabilidades complementares e não contêm regras contraditórias.
 
-- `.github/copilot-instructions.md` e `AGENTS.md` são gerais e automáticos.
-- `api.instructions.md` entra quando a tarefa trabalha com arquivos que
-  correspondem a `src/Api/**/*.cs`.
-- `tests.instructions.md` entra quando a tarefa trabalha com arquivos que
-  correspondem a `src/Tests/**/*.cs`.
-- Um arquivo `*.instructions.md` também pode ser anexado manualmente, mesmo
-  quando o arquivo atual não corresponde ao seu `applyTo`.
+Não existe uma lista universal como “pessoal vence repositório” ou
+“`AGENTS.md` vence `copilot-instructions.md`”. Pense no processo em três
+etapas:
+
+1. **Descoberta:** a ferramenta localiza as instructions disponíveis no
+   perfil, no workspace e, quando suportado, em diretórios do repositório.
+2. **Aplicabilidade:** as instructions gerais são incluídas automaticamente;
+   um arquivo `*.instructions.md` entra quando seu `applyTo` corresponde aos
+   arquivos da tarefa ou quando é anexado manualmente.
+3. **Combinação:** todas as instructions aplicáveis são adicionadas ao
+   contexto. A ordem entre formatos não é garantida, portanto uma regra não
+   deve depender de “sobrescrever” outra.
+
+Neste repositório, `.github/copilot-instructions.md` e o `AGENTS.md` da raiz
+são gerais. `api.instructions.md` entra ao trabalhar em arquivos
+`src/Api/**/*.cs`, enquanto `tests.instructions.md` entra para
+`src/Tests/**/*.cs`. Se houver vários `AGENTS.md` aninhados, o mais próximo do
+arquivo em que o agente está trabalhando tem precedência entre esses
+`AGENTS.md`; isso não cria uma precedência geral sobre os outros formatos.
+
+Se duas instructions aplicáveis se contradisserem, o resultado pode variar.
+Prefira regras gerais na raiz e regras complementares, mais específicas, nos
+escopos por caminho. Use as referências da resposta — ou `/instructions` no
+Copilot CLI — para confirmar quais arquivos foram realmente considerados.
 
 As custom instructions afetam o chat e os agentes, mas não as sugestões
 inline mostradas enquanto se digita no editor.
+
+## Monorepos e workspaces abertos em subpastas
+
+A pasta aberta como workspace influencia a descoberta das customizações. Este
+repositório assume que sua raiz foi aberta; assim, os globs como
+`src/Api/**/*.cs` são avaliados a partir da estrutura esperada.
+
+### VS Code
+
+Por padrão, ao abrir somente uma subpasta de um monorepo, o VS Code pode não
+descobrir as customizações que estão acima da raiz desse workspace. Para
+incluir as customizações do repositório pai:
+
+1. Abra **Settings**.
+2. Procure por `chat.useCustomizationsInParentRepositories`.
+3. Habilite **Chat: Use Customizations In Parent Repositories**.
+4. Inicie uma nova conversa e confira as referências carregadas.
+
+Em `settings.json`, a configuração equivalente é:
+
+```json
+{
+  "chat.useCustomizationsInParentRepositories": true
+}
+```
+
+Mesmo com essa opção, mantenha os padrões `applyTo` coerentes com a raiz usada
+para organizar o monorepo. Para uma demonstração previsível deste repositório,
+abra sua raiz, e não somente `src`.
+
+### Copilot CLI
+
+Ao ser iniciado em uma subpasta, o Copilot CLI procura instructions no
+diretório de trabalho, nos diretórios intermediários e na raiz do repositório.
+Assim, iniciar o CLI em `src/Api` ainda permite descobrir
+`.github/copilot-instructions.md` e `AGENTS.md` da raiz. Instructions modulares
+continuam sendo incluídas somente quando `applyTo` corresponde a um arquivo em
+que o CLI está trabalhando.
+
+Execute `/instructions` para visualizar, habilitar ou desabilitar os arquivos
+descobertos na sessão. Depois de editar uma instruction, use `/new` ou reinicie
+a sessão do CLI para carregar a nova versão.
 
 ## Preparação da demonstração
 
@@ -217,8 +254,54 @@ que existem somente em `AGENTS.md`.
 > Depois de cada prompt que altera código, descarte as mudanças antes de
 > executar o próximo cenário. Isso mantém cada evidência independente.
 
+## Demonstrar uma User Instruction no Codespace
+
+Uma User Instruction pertence ao perfil do usuário no ambiente, não ao
+repositório. Por isso, ela pode ser combinada com as instructions deste
+workspace sem ser adicionada ao Git.
+
+Para criar uma instruction pessoal com efeito imediatamente visível:
+
+1. No Codespace, abra a Command Palette com `Ctrl+Shift+P`.
+2. Execute **Chat: Open Customizations**.
+3. Abra a aba **Instructions**.
+4. No menu de criação, selecione **New Instructions (User)**.
+5. Informe o nome `noir`. O arquivo será apresentado como
+   `noir.instructions.md`.
+6. Substitua o conteúdo pelo texto abaixo e salve:
+
+```markdown
+---
+name: Narrador noir
+description: Torna o estilo das respostas imediatamente reconhecível.
+applyTo: "**"
+---
+
+- Comece todas as respostas com `DETETIVE:`.
+- Escreva em tom dramático de filme noir, usando frases curtas.
+- Não altere nomes, código ou conteúdo técnico por causa do estilo.
+- Termine todas as respostas com `Caso encerrado.`
+```
+
+7. Inicie uma nova conversa e envie:
+
+```text
+Explique brevemente a responsabilidade do projeto Application.
+```
+
+A resposta deve começar com `DETETIVE:`, usar o tom noir e terminar com
+`Caso encerrado.`. Nas referências ou customizações carregadas, localize
+`Narrador noir` com origem de usuário e compare-a com as instructions de
+origem workspace.
+
+Como `applyTo` vale `**`, a regra é automática para qualquer arquivo. Depois
+da demonstração, desabilite ou exclua `Narrador noir` no mesmo editor para que
+ela não afete os próximos prompts. Para reutilizar User Instructions em outros
+ambientes, habilite **Settings Sync** e inclua **Prompts and Instructions**.
+
 ## Referências
 
 - [Demonstração 1 — Escopo correto, contexto menor](https://github.com/impacta-ghcp-eng-moderna/material/blob/main/modulo-02/plano-modulo-02.md#demonstra%C3%A7%C3%A3o-1--escopo-correto-contexto-menor)
 - [Custom instructions no VS Code](https://code.visualstudio.com/docs/agent-customization/custom-instructions)
+- [Custom instructions no Copilot CLI](https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/add-custom-instructions)
 - [Imagem Dev Container para .NET](https://mcr.microsoft.com/en-us/artifact/mar/devcontainers/dotnet/about)
