@@ -200,13 +200,16 @@ Observe `GERAL:` e as referências a `.github/copilot-instructions.md` e
 4. Envie:
 
 ```text
-Adicione um endpoint GET /api/trainings/count que retorne a quantidade de
-treinamentos cadastrados. Mantenha os contratos e padrões existentes.
+Implemente somente em src/Api/Program.cs o endpoint GET /api/trainings/count,
+que retorna a quantidade de treinamentos cadastrados. Não crie nem modifique
+testes ou outros arquivos.
 ```
 
 Observe `GERAL:`, `API:` e a referência a `api.instructions.md`. A resposta
 deve manter Minimal API, acesso assíncrono e declarar o status produzido. A
-instruction de testes não deve ser carregada só por essa alteração.
+instruction de testes não deve ser carregada nem arquivos em `src/Tests`
+devem ser alterados. O agente ainda pode executar os testes existentes para
+validar a mudança.
 
 ### 3. Escopo dos testes
 
