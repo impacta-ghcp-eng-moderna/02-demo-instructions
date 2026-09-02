@@ -167,14 +167,22 @@ a sessão do CLI para carregar a nova versão.
    textuais facilitam a visualização, mas as referências comprovam qual
    instruction foi carregada.
 
-Se a interface não atualizar uma instruction recém-editada, inicie uma nova
-conversa antes de repetir o prompt.
+Para iniciar uma sessão limpa, abra a Command Palette com `Ctrl+Shift+P` e
+execute **Chat: New Chat**. Faça isso nos pontos indicados abaixo. Não confunda
+esse comando com o botão `+` no canto inferior do campo de texto, que abre
+**Add Context** para a mensagem atual.
+
+Sempre inicie uma nova sessão depois de editar, habilitar ou desabilitar uma
+instruction. Isso força uma nova descoberta das customizações e evita que o
+histórico da demonstração anterior influencie a próxima resposta.
 
 ## Prompts para testar cada comportamento
 
 ### 1. Instructions gerais
 
-Com `src/Application/Training.cs` aberto, envie:
+1. Execute **Chat: New Chat**.
+2. Abra `src/Application/Training.cs`.
+3. Envie:
 
 ```text
 Sem alterar arquivos, explique como você implementaria uma nova propriedade
@@ -186,7 +194,10 @@ Observe `GERAL:` e as referências a `.github/copilot-instructions.md` e
 
 ### 2. Escopo da API
 
-Com `src/Api/Program.cs` aberto, envie:
+1. Descarte qualquer alteração produzida pelo cenário anterior.
+2. Execute **Chat: New Chat**.
+3. Abra `src/Api/Program.cs`.
+4. Envie:
 
 ```text
 Adicione um endpoint GET /api/trainings/count que retorne a quantidade de
@@ -199,7 +210,10 @@ instruction de testes não deve ser carregada só por essa alteração.
 
 ### 3. Escopo dos testes
 
-Com `src/Tests/Api.Tests/TrainingCreationTests.cs` aberto, envie:
+1. Descarte qualquer alteração produzida pelo cenário anterior.
+2. Execute **Chat: New Chat**.
+3. Abra `src/Tests/Api.Tests/TrainingCreationTests.cs`.
+4. Envie:
 
 ```text
 Adicione um teste funcional para comprovar que criar um treinamento com
@@ -213,7 +227,9 @@ se nenhum arquivo de `src/Api` for alterado.
 
 ### 4. Combinação dos dois escopos
 
-Envie:
+1. Descarte qualquer alteração produzida pelo cenário anterior.
+2. Execute **Chat: New Chat**.
+3. Envie:
 
 ```text
 Implemente na API um endpoint GET /api/trainings/count e crie um teste
@@ -225,8 +241,14 @@ específicas nas referências e os marcadores `API:` e `TESTES:`.
 
 ### 5. Anexo manual
 
-No seletor de contexto do chat, use **Add Context > Instructions** e anexe
-`API do Training Catalog`. Com `src/Application/Training.cs` aberto, envie:
+1. Descarte qualquer alteração produzida pelo cenário anterior.
+2. Execute **Chat: New Chat**.
+3. Abra `src/Application/Training.cs`.
+4. No canto inferior do campo do chat, selecione `+` (**Add Context**) ou use
+   `Ctrl+/`.
+5. Selecione **Instructions** e escolha `api`, nome-base de
+   `api.instructions.md`.
+6. Envie:
 
 ```text
 Sem alterar arquivos, avalie este contrato como se ele fosse usado por um
@@ -234,12 +256,20 @@ novo endpoint da API.
 ```
 
 Mesmo fora do glob `src/Api/**/*.cs`, a referência e o marcador `API:` devem
-aparecer porque a instruction foi anexada explicitamente. Remova o anexo e
-repita em uma nova conversa para comparar.
+aparecer porque a instruction foi anexada explicitamente.
+
+Para comparar sem o anexo:
+
+1. Execute **Chat: New Chat**; não apenas remova o anexo da mensagem anterior.
+2. Confirme que `api` não aparece como contexto anexado.
+3. Abra novamente `src/Application/Training.cs` e repita o mesmo prompt.
+
+Sem o anexo manual e fora do glob da API, o marcador `API:` não deve aparecer.
 
 ### 6. `AGENTS.md`
 
-Envie:
+1. Execute **Chat: New Chat**.
+2. Envie:
 
 ```text
 Para adicionar uma propriedade ao modelo, quais arquivos deste repositório
@@ -285,6 +315,9 @@ applyTo: "**"
 
 7. Inicie uma nova conversa e envie:
 
+   Para isso, execute **Chat: New Chat** antes de testar a instruction
+   recém-criada.
+
 ```text
 Explique brevemente a responsabilidade do projeto Application.
 ```
@@ -296,8 +329,10 @@ origem workspace.
 
 Como `applyTo` vale `**`, a regra é automática para qualquer arquivo. Depois
 da demonstração, desabilite ou exclua `Narrador noir` no mesmo editor para que
-ela não afete os próximos prompts. Para reutilizar User Instructions em outros
-ambientes, habilite **Settings Sync** e inclua **Prompts and Instructions**.
+ela não afete os próximos prompts. Em seguida, execute **Chat: New Chat** antes
+de continuar: sessões já iniciadas podem conservar o contexto anterior. Para
+reutilizar User Instructions em outros ambientes, habilite **Settings Sync** e
+inclua **Prompts and Instructions**.
 
 ## Referências
 
